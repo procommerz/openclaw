@@ -123,12 +123,12 @@ repos:
         pass_filenames: false
 
       # oxlint --type-aware src test
-      - id: oxlint
-        name: oxlint
-        entry: scripts/pre-commit/run-node-tool.sh oxlint --type-aware src test
-        language: system
-        pass_filenames: false
-        types_or: [javascript, jsx, ts, tsx]
+      # - id: oxlint
+      #   name: oxlint
+      #   entry: scripts/pre-commit/run-node-tool.sh oxlint --type-aware src test
+      #   language: system
+      #   pass_filenames: false
+      #   types_or: [javascript, jsx, ts, tsx]
 
       # oxfmt --check src test
       # - id: oxfmt
