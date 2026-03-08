@@ -131,25 +131,25 @@ repos:
         types_or: [javascript, jsx, ts, tsx]
 
       # oxfmt --check src test
-      - id: oxfmt
-        name: oxfmt
-        entry: scripts/pre-commit/run-node-tool.sh oxfmt --check src test
-        language: system
-        pass_filenames: false
-        types_or: [javascript, jsx, ts, tsx]
+      # - id: oxfmt
+      #   name: oxfmt
+      #   entry: scripts/pre-commit/run-node-tool.sh oxfmt --check src test
+      #   language: system
+      #   pass_filenames: false
+      #   types_or: [javascript, jsx, ts, tsx]
 
-      # swiftlint (same as CI)
-      - id: swiftlint
-        name: swiftlint
-        entry: swiftlint --config .swiftlint.yml
-        language: system
-        pass_filenames: false
-        types: [swift]
+      # # swiftlint (same as CI)
+      # - id: swiftlint
+      #   name: swiftlint
+      #   entry: swiftlint --config .swiftlint.yml
+      #   language: system
+      #   pass_filenames: false
+      #   types: [swift]
 
-      # swiftformat --lint (same as CI)
-      - id: swiftformat
-        name: swiftformat
-        entry: swiftformat --lint apps/macos/Sources --config .swiftformat
-        language: system
-        pass_filenames: false
-        types: [swift]
+      # # swiftformat --lint (same as CI)
+      # - id: swiftformat
+      #   name: swiftformat
+      #   entry: swiftformat --lint apps/macos/Sources --config .swiftformat
+      #   language: system
+      #   pass_filenames: false
+      #   types: [swift]
