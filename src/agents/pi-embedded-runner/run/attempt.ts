@@ -13,6 +13,7 @@ import type { OpenClawConfig } from "../../../config/config.js";
 import { getMachineDisplayName } from "../../../infra/machine-name.js";
 import { ensureGlobalUndiciStreamTimeouts } from "../../../infra/net/undici-global-dispatcher.js";
 import { MAX_IMAGE_BYTES } from "../../../media/constants.js";
+import { logMessagesToStreamLogger } from "../../../logging/thread-logger.js";
 import { getGlobalHookRunner } from "../../../plugins/hook-runner-global.js";
 import type {
   PluginHookAgentContext,
@@ -2001,6 +2002,39 @@ export async function runEmbeddedAttempt(
             typeof entry.toolName === "string" && entry.toolName.trim().length > 0,
         )
         .map((entry) => ({ toolName: entry.toolName, meta: entry.meta }));
+
+      // Custom logging start
+      const logName = `${params.sessionId}.${params.runId}`;
+
+      if (toolMetasNormalized.length > 0) {
+        logMessagesToStreamLogger({
+          messages: toolMetasNormalized.map((entry) => ({
+            role: "tool-metas",
+            content: JSON.stringify(entry),
+          })),
+          name: logName,
+        })
+          .then((_) => {})
+          .catch((err) => {
+            log.error(`❗️ failed to log tool metas to stream logger: ${err}`);
+          });
+      }
+
+      let loggedHistoryMessages = messagesSnapshot.slice();
+
+      if (systemPromptText && systemPromptText.length > 0) {
+        loggedHistoryMessages.unshift({
+          role: "system",
+          content: systemPromptText,
+        });
+      }
+
+      logMessagesToStreamLogger({ messages: loggedHistoryMessages, name: logName })
+        .then((_) => {})
+        .catch((err) => {
+          log.error(`❗️ failed to log messages to stream logger: ${err}`);
+        });
+      // Custom logging end
 
       if (hookRunner?.hasHooks("llm_output")) {
         hookRunner

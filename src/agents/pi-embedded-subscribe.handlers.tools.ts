@@ -21,6 +21,7 @@ import { inferToolMetaFromArgs } from "./pi-embedded-utils.js";
 import { consumeAdjustedParamsForToolCall } from "./pi-tools.before-tool-call.js";
 import { buildToolMutationState, isSameToolMutationAction } from "./tool-mutation.js";
 import { normalizeToolName } from "./tool-policy.js";
+import { logMessagesToStreamLogger } from "../logging/thread-logger.js";
 
 type ToolStartRecord = {
   startTime: number;
@@ -236,6 +237,13 @@ export async function handleToolExecutionStart(
     data: { phase: "start", name: toolName, toolCallId },
   });
 
+  logMessagesToStreamLogger({
+    messages: [{ role: "tool-start", content: JSON.stringify({ toolName, toolCallId, args }) }],
+    name: logName,
+  }).then((_) => {}).catch((err) => {
+    log.error(`❗️ failed to log tool call to stream logger: ${err}`);
+  });
+
   if (
     ctx.params.onToolResult &&
     shouldEmitToolEvents &&
@@ -350,6 +358,14 @@ export async function handleToolExecutionEnd(
       ctx.state.lastToolError = undefined;
     }
   }
+
+  const logName = `${ctx.params.sessionId}.${ctx.params.runId}`;
+  logMessagesToStreamLogger({
+    messages: [{ role: "tool-end", content: JSON.stringify({ toolName, toolCallId, result }) }],
+    name: logName,
+  }).then((_) => {}).catch((err) => {
+    log.error(`❗️ failed to log tool call to stream logger: ${err}`);
+  });
 
   // Commit messaging tool text on success, discard on error.
   const pendingText = ctx.state.pendingMessagingTexts.get(toolCallId);
