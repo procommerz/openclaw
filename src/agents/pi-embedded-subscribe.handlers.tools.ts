@@ -237,6 +237,7 @@ export async function handleToolExecutionStart(
     data: { phase: "start", name: toolName, toolCallId },
   });
 
+  const logName = `${ctx.params.sessionId}.${ctx.params.runId}`;
   logMessagesToStreamLogger({
     messages: [{ role: "tool-start", content: JSON.stringify({ toolName, toolCallId, args }) }],
     name: logName,
