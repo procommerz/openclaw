@@ -131,6 +131,9 @@ const shouldBuild = (deps) => {
   if (deps.env.OPENCLAW_FORCE_BUILD === "1") {
     return true;
   }
+  if (deps.env.OPENCLAW_FORCE_NO_BUILD === "1") {
+    return false;
+  }
   const stamp = readBuildStamp(deps);
   if (stamp.mtime == null) {
     return true;
