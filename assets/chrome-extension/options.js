@@ -49,11 +49,13 @@ async function checkRelayReachable(port, token) {
 }
 
 async function load() {
-  const stored = await chrome.storage.local.get(['relayPort', 'gatewayToken'])
+  const stored = await chrome.storage.local.get(['relayPort', 'gatewayToken', 'autoAttachNewTabs'])
   const port = clampPort(stored.relayPort)
   const token = String(stored.gatewayToken || '').trim()
   document.getElementById('port').value = String(port)
   document.getElementById('token').value = token
+  // Default is enabled; only show unchecked when explicitly set to false.
+  document.getElementById('auto-attach').checked = stored.autoAttachNewTabs !== false
   updateRelayUrl(port)
   await checkRelayReachable(port, token)
 }
@@ -61,9 +63,11 @@ async function load() {
 async function save() {
   const portInput = document.getElementById('port')
   const tokenInput = document.getElementById('token')
+  const autoAttachInput = document.getElementById('auto-attach')
   const port = clampPort(portInput.value)
   const token = String(tokenInput.value || '').trim()
-  await chrome.storage.local.set({ relayPort: port, gatewayToken: token })
+  const autoAttach = autoAttachInput.checked
+  await chrome.storage.local.set({ relayPort: port, gatewayToken: token, autoAttachNewTabs: autoAttach })
   portInput.value = String(port)
   tokenInput.value = token
   updateRelayUrl(port)

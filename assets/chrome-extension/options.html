@@ -149,6 +149,45 @@
       .status[data-kind='error'] {
         color: color-mix(in oklab, #ef4444 75%, canvasText 25%);
       }
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        cursor: pointer;
+        user-select: none;
+      }
+      .toggle-row input[type="checkbox"] {
+        width: 36px;
+        height: 20px;
+        appearance: none;
+        -webkit-appearance: none;
+        background: var(--border);
+        border-radius: 10px;
+        border: none;
+        cursor: pointer;
+        position: relative;
+        transition: background 0.2s;
+        flex-shrink: 0;
+        padding: 0;
+      }
+      .toggle-row input[type="checkbox"]::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: white;
+        transition: transform 0.2s;
+      }
+      .toggle-row input[type="checkbox"]:checked {
+        background: var(--accent);
+      }
+      .toggle-row input[type="checkbox"]:checked::after {
+        transform: translateX(16px);
+      }
     </style>
   </head>
   <body>
@@ -159,7 +198,7 @@
         </div>
         <div>
           <h1>OpenClaw Browser Relay</h1>
-          <p class="subtitle">Click the toolbar button on a tab to attach / detach.</p>
+          <p class="subtitle">Auto-attaches new tabs by default. Click the toolbar button to attach / detach manually.</p>
         </div>
       </header>
 
@@ -173,6 +212,15 @@
           <p>
             Full guide (install, remote Gateway, security): <a href="https://docs.openclaw.ai/tools/chrome-extension" target="_blank" rel="noreferrer">docs.openclaw.ai/tools/chrome-extension</a>
           </p>
+        </div>
+
+        <div class="card">
+          <h2>Behavior</h2>
+          <label class="toggle-row" for="auto-attach">
+            <span>Auto-attach new tabs</span>
+            <input id="auto-attach" type="checkbox" />
+          </label>
+          <p>When enabled, every new tab is automatically attached to the relay as soon as it finishes loading. You can still detach individual tabs by clicking the toolbar button. Changes take effect after saving.</p>
         </div>
 
         <div class="card">

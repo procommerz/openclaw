@@ -836,6 +836,55 @@ async function onDebuggerDetach(source, reason) {
   })
 }
 
+// Auto-attach a tab when it finishes loading, if auto-attach is enabled.
+// Fails silently: if the relay is not running or the tab cannot be attached,
+// no badge or error is shown (the user did not explicitly request this tab).
+async function autoAttachNewTab(tabId) {
+  if (tabs.has(tabId) || reattachPending.has(tabId) || tabOperationLocks.has(tabId)) return
+
+  let tabInfo
+  try {
+    tabInfo = await chrome.tabs.get(tabId)
+  } catch {
+    return
+  }
+
+  const url = tabInfo.url || tabInfo.pendingUrl || ''
+  if (
+    !url ||
+    url.startsWith('chrome://') ||
+    url.startsWith('chrome-extension://') ||
+    url.startsWith('about:') ||
+    url.startsWith('data:')
+  ) return
+
+  tabOperationLocks.add(tabId)
+  tabs.set(tabId, { state: 'connecting' })
+  setBadge(tabId, 'connecting')
+
+  try {
+    await ensureRelayConnection()
+    // Re-check: tab may have been manually detached or replaced while awaiting.
+    if (tabs.get(tabId)?.state !== 'connecting') return
+    await attachTab(tabId)
+  } catch {
+    if (tabs.get(tabId)?.state === 'connecting') {
+      tabs.delete(tabId)
+      setBadge(tabId, 'off')
+    }
+  } finally {
+    tabOperationLocks.delete(tabId)
+  }
+}
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => void whenReady(async () => {
+  if (changeInfo.status !== 'complete') return
+  const stored = await chrome.storage.local.get(['autoAttachNewTabs'])
+  // Default is enabled; only skip when explicitly set to false.
+  if (stored.autoAttachNewTabs === false) return
+  await autoAttachNewTab(tabId)
+}))
+
 // Tab lifecycle listeners — clean up stale entries.
 chrome.tabs.onRemoved.addListener((tabId) => void whenReady(() => {
   reattachPending.delete(tabId)
