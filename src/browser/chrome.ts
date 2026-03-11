@@ -273,7 +273,7 @@ export async function launchOpenClawChrome(
       "--disable-features=Translate,MediaRouter",
       "--disable-session-crashed-bubble",
       "--hide-crash-restore-bubble",
-      "--password-store=basic",
+      "--password-store=basic",      
     ];
 
     if (resolved.headless) {
@@ -287,7 +287,13 @@ export async function launchOpenClawChrome(
     }
     if (process.platform === "linux") {
       args.push("--disable-dev-shm-usage");
+
+      // Wayland support for non-headless mode
+      // TODO: Check for Wayland presence first
+      args.push("--ozone-platform=wayland");
+      args.push("--enable-features=UseOzonePlatform");
     }
+
 
     // Append user-configured extra arguments (e.g., stealth flags, window size)
     if (resolved.extraArgs.length > 0) {
@@ -296,6 +302,8 @@ export async function launchOpenClawChrome(
 
     // Always open a blank tab to ensure a target exists.
     args.push("about:blank");
+
+    log.info(`🦞 openclaw browser starting: ${exe.path} ${args.join(" ")}`);
 
     return spawn(exe.path, args, {
       stdio: "pipe",
