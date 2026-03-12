@@ -1,3 +1,5 @@
+import { logWarn } from "../logger.js";
+
 export type TargetIdResolution =
   | { ok: true; targetId: string }
   | { ok: false; reason: "not_found" | "ambiguous"; matches?: string[] };
@@ -24,6 +26,7 @@ export function resolveTargetIdFromTabs(
     return { ok: true, targetId: only };
   }
   if (matches.length === 0) {
+    logWarn(`[browser] [resolveTargetIdFromTabs] tab not found: ${needle}, present tabs: ${JSON.stringify(tabs)}`);
     return { ok: false, reason: "not_found" };
   }
   return { ok: false, reason: "ambiguous", matches };

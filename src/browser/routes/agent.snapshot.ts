@@ -24,6 +24,7 @@ import {
 } from "./agent.shared.js";
 import type { BrowserResponse, BrowserRouteRegistrar } from "./types.js";
 import { jsonError, toBoolean, toNumber, toStringOrEmpty } from "./utils.js";
+import { logInfo } from "../../logger.js";
 
 async function saveBrowserMediaResponse(params: {
   res: BrowserResponse;
@@ -212,6 +213,8 @@ export function registerBrowserAgentSnapshotRoutes(
       return;
     }
     const targetId = typeof req.query.targetId === "string" ? req.query.targetId.trim() : "";
+    
+    logInfo(`[browser] [/snapshot route] targetId: ${targetId}, req.query: ${JSON.stringify(req.query)}`);
     const mode = req.query.mode === "efficient" ? "efficient" : undefined;
     const labels = toBoolean(req.query.labels) ?? undefined;
     const explicitFormat =
