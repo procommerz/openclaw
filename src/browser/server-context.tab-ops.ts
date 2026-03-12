@@ -19,6 +19,7 @@ import type {
   BrowserTab,
   ProfileRuntimeState,
 } from "./server-context.types.js";
+import {getMemorableId} from "../utils/memorable-ids.js";
 
 type TabOpsDeps = {
   profile: ResolvedBrowserProfile;
@@ -68,7 +69,7 @@ export function createProfileTabOps({
       if (typeof listPagesViaPlaywright === "function") {
         const pages = await listPagesViaPlaywright({ cdpUrl: profile.cdpUrl });
         return pages.map((p) => ({
-          targetId: p.targetId,
+          targetId: getMemorableId("browser-tab", p.targetId),
           title: p.title,
           url: p.url,
           type: p.type,
@@ -87,7 +88,7 @@ export function createProfileTabOps({
     >(appendCdpPath(cdpHttpBase, "/json/list"));
     return raw
       .map((t) => ({
-        targetId: t.id ?? "",
+        targetId: t.id ? getMemorableId("browser-tab", t.id) : "",
         title: t.title ?? "",
         url: t.url ?? "",
         wsUrl: normalizeWsUrl(t.webSocketDebuggerUrl, profile.cdpUrl),
@@ -144,10 +145,11 @@ export function createProfileTabOps({
           ...ssrfPolicyOpts,
         });
         const profileState = getProfileState();
-        profileState.lastTargetId = page.targetId;
-        triggerManagedTabLimit(page.targetId);
+        let lastTargetId = getMemorableId("browser-tab", page.targetId);
+        profileState.lastTargetId = lastTargetId;
+        triggerManagedTabLimit(lastTargetId);
         return {
-          targetId: page.targetId,
+          targetId: lastTargetId,
           title: page.title,
           url: page.url,
           type: page.type,
@@ -160,7 +162,7 @@ export function createProfileTabOps({
       url,
       ...ssrfPolicyOpts,
     })
-      .then((r) => r.targetId)
+      .then((r) => getMemorableId("browser-tab", r.targetId))
       .catch(() => null);
 
     if (createdViaCdp) {
@@ -203,12 +205,12 @@ export function createProfileTabOps({
       throw new Error("Failed to open tab (missing id)");
     }
     const profileState = getProfileState();
-    profileState.lastTargetId = created.id;
+    profileState.lastTargetId = getMemorableId("browser-tab", created.id);
     const resolvedUrl = created.url ?? url;
     await assertBrowserNavigationResultAllowed({ url: resolvedUrl, ...ssrfPolicyOpts });
     triggerManagedTabLimit(created.id);
     return {
-      targetId: created.id,
+      targetId: getMemorableId("browser-tab", created.id),
       title: created.title ?? "",
       url: resolvedUrl,
       wsUrl: normalizeWsUrl(created.webSocketDebuggerUrl, profile.cdpUrl),

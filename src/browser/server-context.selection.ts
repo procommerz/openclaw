@@ -5,6 +5,7 @@ import type { PwAiModule } from "./pw-ai-module.js";
 import { getPwAiModule } from "./pw-ai-module.js";
 import type { BrowserTab, ProfileRuntimeState } from "./server-context.types.js";
 import { resolveTargetIdFromTabs } from "./target-id.js";
+import { logInfo, logWarn } from "../logger.js";
 
 type SelectionDeps = {
   profile: ResolvedBrowserProfile;
@@ -105,6 +106,7 @@ export function createProfileSelectionOps({
       if (resolved.reason === "ambiguous") {
         throw new Error("ambiguous target id prefix");
       }
+      logWarn(`[browser] [ensureTabAvailable] tab not found: ${targetId}, present tabs: ${JSON.stringify(tabs)}`);
       throw new Error("tab not found");
     }
     return resolved.targetId;
