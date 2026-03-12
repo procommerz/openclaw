@@ -12,6 +12,7 @@ import { defaultRuntime } from "../runtime.js";
 import { shortenHomePath } from "../utils.js";
 import { callBrowserRequest, type BrowserParentOpts } from "./browser-cli-shared.js";
 import { runCommandWithRuntime } from "./cli-utils.js";
+import {memorableToOriginalId} from "../utils/memorable-ids.js";
 
 function resolveProfileQuery(profile?: string) {
   return profile ? { profile } : undefined;
@@ -94,7 +95,7 @@ function logBrowserTabs(tabs: BrowserTab[], json?: boolean) {
   }
   defaultRuntime.log(
     tabs
-      .map((t, i) => `${i + 1}. ${t.title || "(untitled)"}\n   ${t.url}\n   id: ${t.targetId}`)
+      .map((t, i) => `${i + 1}. ${t.title || "(untitled)"}\n   ${t.url}\n   id: ${t.targetId} (original: ${memorableToOriginalId("browser-tab", t.targetId)})`)
       .join("\n"),
   );
 }

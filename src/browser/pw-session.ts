@@ -24,6 +24,8 @@ import {
   assertBrowserNavigationResultAllowed,
   withBrowserNavigationPolicy,
 } from "./navigation-guard.js";
+import { memorableToOriginalId } from "../utils/memorable-ids.js";
+import { logWarn } from "../logger.js";
 
 export type BrowserConsoleMessage = {
   type: string;
@@ -406,15 +408,19 @@ async function findPageByTargetId(
   const pages = await getAllPages(browser);
   let resolvedViaCdp = false;
   // First, try the standard CDP session approach
+  let existingTids = [];
+  const originalTargetId = memorableToOriginalId("browser-tab", targetId);
+
   for (const page of pages) {
     let tid: string | null = null;
     try {
       tid = await pageTargetId(page);
+      existingTids.push(tid);
       resolvedViaCdp = true;
     } catch {
       tid = null;
     }
-    if (tid && tid === targetId) {
+    if (tid && (tid === originalTargetId || tid == targetId)) {
       return page;
     }
   }
@@ -435,10 +441,12 @@ async function findPageByTargetId(
           title?: string;
         }>
       >(appendCdpPath(cdpHttpBase, "/json/list"), 2000);
-      const target = targets.find((t) => t.id === targetId);
+      existingTids.push(...targets.map((t) => t.id));            
+      const target = targets.find((t) => t.id === originalTargetId || t.id === targetId);
       if (target) {
+        let existingPageUrls = pages.map((p) => p.url());
         // Try to find a page with matching URL
-        const urlMatch = pages.filter((p) => p.url() === target.url);
+        const urlMatch = pages.filter((p) => p.url() == target.url);
         if (urlMatch.length === 1) {
           return urlMatch[0];
         }
@@ -447,17 +455,34 @@ async function findPageByTargetId(
         if (urlMatch.length > 1) {
           const sameUrlTargets = targets.filter((t) => t.url === target.url);
           if (sameUrlTargets.length === urlMatch.length) {
-            const idx = sameUrlTargets.findIndex((t) => t.id === targetId);
+            const idx = sameUrlTargets.findIndex((t) => (t.id === originalTargetId || t.id === targetId));
             if (idx >= 0 && idx < urlMatch.length) {
               return urlMatch[idx];
             }
           }
+        } 
+
+        // Try to find a partial match
+        const partialMatch = pages.find((p) => p.url().includes(target.url));
+        if (partialMatch) {
+          logWarn(`[browser] [findPageByTargetId] (partial page match) page for tab not found by url: ${targetId} (original: ${originalTargetId}), existing TIDs: ${existingTids.join(", ")}. Url matches: ${urlMatch.length}, Url token: ${target.url}, existing page urls: ${existingPageUrls.join(", ")}. **Partial match**: ${partialMatch.url()}`);  
+          return partialMatch;
         }
+
+        const domainMatch = pages.find((p) => p.url().includes(target.url.split("/")[2]));
+        if (domainMatch) {
+          logWarn(`[browser] [findPageByTargetId] (domain page match) page for tab not found by url: ${targetId} (original: ${originalTargetId}), existing TIDs: ${existingTids.join(", ")}. Url matches: ${urlMatch.length}, Url token: ${target.url}, existing page urls: ${existingPageUrls.join(", ")}. **Domain match**: ${domainMatch.url()}`);  
+          return domainMatch;
+        }
+      
+        logWarn(`[browser] [findPageByTargetId] page for tab not found by url: ${targetId} (original: ${originalTargetId}), existing TIDs: ${existingTids.join(", ")}. Url matches: ${urlMatch.length}, Url token: ${target.url}, existing page urls: ${existingPageUrls.join(", ")}`);  
       }
     } catch {
       // Ignore fetch errors and fall through to return null
     }
   }
+
+  logWarn(`[browser] [findPageByTargetId] tab not found: ${targetId} (original: ${originalTargetId}), existing TIDs: ${existingTids.join(", ")}`);  
   return null;
 }
 
@@ -493,7 +518,7 @@ export async function getPageForTargetId(opts: {
     // only exposes a single Page, use it as a best-effort fallback.
     if (pages.length === 1) {
       return first;
-    }
+    }    
     throw new Error("tab not found");
   }
   return found;
