@@ -40,7 +40,8 @@ export class HumanizedIdStore {
     "ship", "wave", "ice", "mint", "clay", "frog", "hawk", "seed",
     "lucky", "easy", "best", "widget", "snake", "lion", "tiger",
     "lobster", "train", "wheel", "monk", "tree", "token", "happy",
-    "fish", "lazy", "purple", "pasta", "kick"
+    "fish", "lazy", "purple", "pasta", "kick", "jack", "plane", "wall",
+    "funky", "fruit", "jazzy", "jelly"
   ];
 
   constructor(options: HumanizedIdStoreOptions) {
@@ -49,7 +50,7 @@ export class HumanizedIdStore {
     this.lockTimeoutMs = options.lockTimeoutMs ?? 10_000;
     this.lockRetryDelayMs = options.lockRetryDelayMs ?? 50;
     this.maxLockWaitMs = options.maxLockWaitMs ?? 5_000;
-    this.maxIdsPerScope = options.maxIdsPerScope ?? 32;
+    this.maxIdsPerScope = options.maxIdsPerScope ?? 320;
     this.wordsPerId = options.wordsPerId ?? 3;
     this.separator = options.separator ?? "-";
 
@@ -94,9 +95,9 @@ export class HumanizedIdStore {
       }
 
       const scopeRecords = activeRecords.filter((r) => r.scope === scope);
-      if (scopeRecords.length >= this.maxIdsPerScope) {
+      if (scopeRecords.length >= this.maxIdsPerScope) {                
         throw new Error(
-          `Scope "${scope}" has reached the limit of ${this.maxIdsPerScope} IDs`
+          `Scope "${scope}" has reached the limit of ${this.maxIdsPerScope} IDs, remove your temp file, e.g. "unlink /tmp/oc-memorable-ids.txt"`
         );
       }
 
