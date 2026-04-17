@@ -219,7 +219,7 @@ export async function deliverAgentCommandResult(params: {
   }
   if (deliver && deliveryChannel && !isInternalMessageChannel(deliveryChannel)) {
     if (deliveryTarget) {
-      await deliverOutboundPayloads({
+      const deliveryOpts = {
         cfg,
         channel: deliveryChannel,
         to: deliveryTarget,
@@ -232,7 +232,9 @@ export async function deliverAgentCommandResult(params: {
         onError: (err) => logDeliveryError(err),
         onPayload: logPayload,
         deps: createOutboundSendDeps(deps),
-      });
+      };
+
+      await deliverOutboundPayloads(deliveryOpts);
     }
   }
 

@@ -46,7 +46,7 @@ export function resolveSilentReplyFallbackText(params: {
   messagingToolSentTexts: string[];
 }): string {
   const trimmed = params.text.trim();
-  if (trimmed !== SILENT_REPLY_TOKEN) {
+  if (trimmed !== SILENT_REPLY_TOKEN && trimmed !== "") {
     return params.text;
   }
   const fallback = params.messagingToolSentTexts.at(-1)?.trim();
