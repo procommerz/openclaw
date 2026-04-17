@@ -2,6 +2,11 @@
 
 Docs: https://docs.openclaw.ai
 
+## 2026.4.1WR
+
+- Agents/logging: add structured LLM trace events (`OPENCLAW_LLM_TRACE_URL`) for per-request model payloads, raw assistant stream events, and tool lifecycle (before sanitization), with optional legacy `{ streamName, messages }` batch posts via `logMessagesToStreamLogger`.
+
+
 ## 2026.3.8
 
 ### Changes

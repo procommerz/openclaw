@@ -133,6 +133,22 @@ Default file:
 
 `~/.openclaw/logs/raw-stream.jsonl`
 
+## Remote LLM trace API (structured)
+
+To send **structured** trace events to an HTTP log viewer (per outbound model request via `onPayload`, raw assistant stream lines, and tool start/update/end before sanitization), set:
+
+```bash
+OPENCLAW_LLM_TRACE_URL=http://127.0.0.1:9797/log
+```
+
+Disable even when a URL is present:
+
+```bash
+OPENCLAW_LLM_TRACE=0
+```
+
+Each POST body is JSON: `{ "streamName": "<sessionId>.<runId>", "event": { "eventType": "...", "seq": N, ... } }`.
+
 ## Raw chunk logging (pi-mono)
 
 To capture **raw OpenAI-compat chunks** before they are parsed into blocks,

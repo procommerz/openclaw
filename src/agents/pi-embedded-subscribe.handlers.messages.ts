@@ -2,6 +2,7 @@ import type { AgentEvent, AgentMessage } from "@mariozechner/pi-agent-core";
 import { parseReplyDirectives } from "../auto-reply/reply/reply-directives.js";
 import { SILENT_REPLY_TOKEN } from "../auto-reply/tokens.js";
 import { emitAgentEvent } from "../infra/agent-events.js";
+import { postLlmTraceEvent, resolveLlmTraceStreamName } from "../logging/llm-trace.js";
 import { createInlineCodeState } from "../markdown/code-spans.js";
 import {
   isMessagingToolDuplicateNormalized,
@@ -73,6 +74,19 @@ export function handleMessageStart(
   ctx.resetAssistantMessageState(ctx.state.assistantTexts.length);
   // Use assistant message_start as the earliest "writing" signal for typing.
   void ctx.params.onAssistantMessageStart?.();
+
+  postLlmTraceEvent({
+    eventType: "assistant_message_start",
+    ts: Date.now(),
+    streamName: resolveLlmTraceStreamName({
+      sessionId: ctx.params.sessionId,
+      runId: ctx.params.runId,
+    }),
+    sessionId: ctx.params.sessionId,
+    sessionKey: ctx.params.sessionKey,
+    runId: ctx.params.runId,
+    agentId: ctx.params.agentId,
+  });
 }
 
 export function handleMessageUpdate(
@@ -100,11 +114,27 @@ export function handleMessageUpdate(
     const thinkingDelta = typeof assistantRecord?.delta === "string" ? assistantRecord.delta : "";
     const thinkingContent =
       typeof assistantRecord?.content === "string" ? assistantRecord.content : "";
+    const streamName = resolveLlmTraceStreamName({
+      sessionId: ctx.params.sessionId,
+      runId: ctx.params.runId,
+    });
     appendRawStream({
       ts: Date.now(),
       event: "assistant_thinking_stream",
       runId: ctx.params.runId,
       sessionId: (ctx.params.session as { id?: string }).id,
+      evtType,
+      delta: thinkingDelta,
+      content: thinkingContent,
+    });
+    postLlmTraceEvent({
+      eventType: "assistant_thinking_stream",
+      ts: Date.now(),
+      streamName,
+      sessionId: ctx.params.sessionId,
+      sessionKey: ctx.params.sessionKey,
+      runId: ctx.params.runId,
+      agentId: ctx.params.agentId,
       evtType,
       delta: thinkingDelta,
       content: thinkingContent,
@@ -130,11 +160,27 @@ export function handleMessageUpdate(
   const delta = typeof assistantRecord?.delta === "string" ? assistantRecord.delta : "";
   const content = typeof assistantRecord?.content === "string" ? assistantRecord.content : "";
 
+  const streamName = resolveLlmTraceStreamName({
+    sessionId: ctx.params.sessionId,
+    runId: ctx.params.runId,
+  });
   appendRawStream({
     ts: Date.now(),
     event: "assistant_text_stream",
     runId: ctx.params.runId,
     sessionId: (ctx.params.session as { id?: string }).id,
+    evtType,
+    delta,
+    content,
+  });
+  postLlmTraceEvent({
+    eventType: "assistant_text_stream",
+    ts: Date.now(),
+    streamName,
+    sessionId: ctx.params.sessionId,
+    sessionKey: ctx.params.sessionKey,
+    runId: ctx.params.runId,
+    agentId: ctx.params.agentId,
     evtType,
     delta,
     content,
@@ -264,11 +310,26 @@ export function handleMessageEnd(
   promoteThinkingTagsToBlocks(assistantMessage);
 
   const rawText = extractAssistantText(assistantMessage);
+  const streamName = resolveLlmTraceStreamName({
+    sessionId: ctx.params.sessionId,
+    runId: ctx.params.runId,
+  });
   appendRawStream({
     ts: Date.now(),
     event: "assistant_message_end",
     runId: ctx.params.runId,
     sessionId: (ctx.params.session as { id?: string }).id,
+    rawText,
+    rawThinking: extractAssistantThinking(assistantMessage),
+  });
+  postLlmTraceEvent({
+    eventType: "assistant_message_end",
+    ts: Date.now(),
+    streamName,
+    sessionId: ctx.params.sessionId,
+    sessionKey: ctx.params.sessionKey,
+    runId: ctx.params.runId,
+    agentId: ctx.params.agentId,
     rawText,
     rawThinking: extractAssistantThinking(assistantMessage),
   });

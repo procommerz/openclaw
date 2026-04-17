@@ -1,59 +1,94 @@
-/**
- * Pushes messages to the GPT stream logger app (a standlone LLM log viewer)
- * @returns {Promise<boolean>} - True if the messages were pushed successfully, false otherwise
- */
-export const logMessagesToStreamLogger = async ({
-  messages,
-  name,
-}: {
-  messages: { content: string; role: string }[];
-  name: string;
-}) => {
-  const url = `http://192.168.0.111:9797/log`;
+import { safeJsonStringify } from "../utils/safe-json.js";
+import { isLlmTraceEnabled, resolveLlmTraceUrl } from "./llm-trace.js";
 
-  const formattedMessages = messages.map((message) => {
+export {
+  isLlmTraceEnabled,
+  postLlmTraceEvent,
+  resolveLlmTraceStreamName,
+  resolveLlmTraceUrl,
+  wrapStreamFnWithLlmRequestTrace,
+  postLlmTraceOllamaRequest,
+  type LlmRequestTraceContext,
+  type LlmTraceEvent,
+  type LlmTraceEventType,
+} from "./llm-trace.js";
+
+type LegacyMessage = {
+  role: string;
+  content: string;
+};
+
+function formatMessagesForLegacy(
+  messages: { content: string | unknown[]; role: string }[],
+): LegacyMessage[] {
+  return messages.map((message) => {
     let content = "";
 
     if (typeof message.content === "string") {
       content = message.content;
     } else if (Array.isArray(message.content)) {
       content = message.content
-        .map((item) => {
+        .map((item: { type?: string; text?: string }) => {
           if (item.type === "text") {
             return item.text;
-          } else if (item.type === "image_url") {
-            return `[image]`;
           }
+          if (item.type === "image_url") {
+            return "[image]";
+          }
+          return "";
         })
+        .filter(Boolean)
         .join("\n");
     }
 
     return {
       role: message.role,
-      content: content,
+      content,
     };
   });
+}
+
+/**
+ * Legacy batch shape for log viewers that expect `{ streamName, messages }`.
+ * Prefer `postLlmTraceEvent` with structured `eventType` for new integrations.
+ */
+export const logMessagesToStreamLogger = async ({
+  messages,
+  name,
+}: {
+  messages: { content: string | unknown[]; role: string }[];
+  name: string;
+}): Promise<boolean> => {
+  const url = resolveLlmTraceUrl();
+  if (!url || !isLlmTraceEnabled()) {
+    return false;
+  }
+
+  const formattedMessages = formatMessagesForLegacy(messages);
 
   const payload = {
     streamName: name,
     messages: formattedMessages,
   };
 
-  // Attempt sending a post request to the stream logger:
+  const body = safeJsonStringify(payload);
+  if (!body) {
+    return false;
+  }
+
   try {
-    await fetch(url, {
+    const res = await fetch(url, {
       headers: {
         "Content-Type": "application/json",
       },
       method: "POST",
-      body: JSON.stringify(payload),
+      body,
     });
-
-    return true;
-  } catch (error) {
-    if (error instanceof Error && error.message == "fatal") {
-      console.error("Failed to log GPT messages to stream logger: ", error);
+    if (!res.ok) {
+      return false;
     }
+    return true;
+  } catch {
     return false;
   }
 };

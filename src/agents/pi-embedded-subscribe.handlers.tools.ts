@@ -21,7 +21,7 @@ import { inferToolMetaFromArgs } from "./pi-embedded-utils.js";
 import { consumeAdjustedParamsForToolCall } from "./pi-tools.before-tool-call.js";
 import { buildToolMutationState, isSameToolMutationAction } from "./tool-mutation.js";
 import { normalizeToolName } from "./tool-policy.js";
-import { logMessagesToStreamLogger } from "../logging/thread-logger.js";
+import { postLlmTraceEvent, resolveLlmTraceStreamName } from "../logging/llm-trace.js";
 
 type ToolStartRecord = {
   startTime: number;
@@ -237,12 +237,20 @@ export async function handleToolExecutionStart(
     data: { phase: "start", name: toolName, toolCallId },
   });
 
-  const logName = `${ctx.params.sessionId}.${ctx.params.runId}`;
-  logMessagesToStreamLogger({
-    messages: [{ role: "tool-start", content: JSON.stringify({ toolName, toolCallId, args }) }],
-    name: logName,
-  }).then((_) => {}).catch((err) => {
-    log.error(`❗️ failed to log tool call to stream logger: ${err}`);
+  postLlmTraceEvent({
+    eventType: "tool_start",
+    ts: Date.now(),
+    streamName: resolveLlmTraceStreamName({
+      sessionId: ctx.params.sessionId,
+      runId: ctx.params.runId,
+    }),
+    sessionId: ctx.params.sessionId,
+    sessionKey: ctx.params.sessionKey,
+    runId: ctx.params.runId,
+    agentId: ctx.params.agentId,
+    toolName,
+    toolCallId,
+    args,
   });
 
   if (
@@ -289,6 +297,21 @@ export function handleToolExecutionUpdate(
   const toolName = normalizeToolName(String(evt.toolName));
   const toolCallId = String(evt.toolCallId);
   const partial = evt.partialResult;
+  postLlmTraceEvent({
+    eventType: "tool_update",
+    ts: Date.now(),
+    streamName: resolveLlmTraceStreamName({
+      sessionId: ctx.params.sessionId,
+      runId: ctx.params.runId,
+    }),
+    sessionId: ctx.params.sessionId,
+    sessionKey: ctx.params.sessionKey,
+    runId: ctx.params.runId,
+    agentId: ctx.params.agentId,
+    toolName,
+    toolCallId,
+    partialResult: partial,
+  });
   const sanitized = sanitizeToolResult(partial);
   emitAgentEvent({
     runId: ctx.params.runId,
@@ -360,12 +383,21 @@ export async function handleToolExecutionEnd(
     }
   }
 
-  const logName = `${ctx.params.sessionId}.${ctx.params.runId}`;
-  logMessagesToStreamLogger({
-    messages: [{ role: "tool-end", content: JSON.stringify({ toolName, toolCallId, result }) }],
-    name: logName,
-  }).then((_) => {}).catch((err) => {
-    log.error(`❗️ failed to log tool call to stream logger: ${err}`);
+  postLlmTraceEvent({
+    eventType: "tool_end",
+    ts: Date.now(),
+    streamName: resolveLlmTraceStreamName({
+      sessionId: ctx.params.sessionId,
+      runId: ctx.params.runId,
+    }),
+    sessionId: ctx.params.sessionId,
+    sessionKey: ctx.params.sessionKey,
+    runId: ctx.params.runId,
+    agentId: ctx.params.agentId,
+    toolName,
+    toolCallId,
+    isError,
+    result,
   });
 
   // Commit messaging tool text on success, discard on error.

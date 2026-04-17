@@ -8,6 +8,11 @@ import type {
   Tool,
 } from "@mariozechner/pi-ai";
 import { createAssistantMessageEventStream } from "@mariozechner/pi-ai";
+import {
+  isLlmTraceEnabled,
+  postLlmTraceOllamaRequest,
+  type LlmRequestTraceContext,
+} from "../logging/llm-trace.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { isNonSecretApiKeyMarker } from "./model-auth-markers.js";
 import {
@@ -434,8 +439,10 @@ function resolveOllamaModelHeaders(model: {
 export function createOllamaStreamFn(
   baseUrl: string,
   defaultHeaders?: Record<string, string>,
+  traceCtx?: LlmRequestTraceContext,
 ): StreamFn {
   const chatUrl = resolveOllamaChatUrl(baseUrl);
+  let ollamaRequestIndex = 0;
 
   return (model, context, options) => {
     const stream = createAssistantMessageEventStream();
@@ -466,6 +473,16 @@ export function createOllamaStreamFn(
           ...(ollamaTools.length > 0 ? { tools: ollamaTools } : {}),
           options: ollamaOptions,
         };
+
+        if (traceCtx && isLlmTraceEnabled()) {
+          const idx = ollamaRequestIndex;
+          ollamaRequestIndex += 1;
+          postLlmTraceOllamaRequest({
+            ctx: traceCtx,
+            body,
+            requestIndex: idx,
+          });
+        }
 
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
@@ -571,6 +588,7 @@ export function createOllamaStreamFn(
 export function createConfiguredOllamaStreamFn(params: {
   model: { baseUrl?: string; headers?: unknown };
   providerBaseUrl?: string;
+  llmTraceContext?: LlmRequestTraceContext;
 }): StreamFn {
   const modelBaseUrl = typeof params.model.baseUrl === "string" ? params.model.baseUrl : undefined;
   return createOllamaStreamFn(
@@ -579,5 +597,6 @@ export function createConfiguredOllamaStreamFn(params: {
       providerBaseUrl: params.providerBaseUrl,
     }),
     resolveOllamaModelHeaders(params.model),
+    params.llmTraceContext,
   );
 }

@@ -13,7 +13,12 @@ import type { OpenClawConfig } from "../../../config/config.js";
 import { getMachineDisplayName } from "../../../infra/machine-name.js";
 import { ensureGlobalUndiciStreamTimeouts } from "../../../infra/net/undici-global-dispatcher.js";
 import { MAX_IMAGE_BYTES } from "../../../media/constants.js";
-import { logMessagesToStreamLogger } from "../../../logging/thread-logger.js";
+import {
+  isLlmTraceEnabled,
+  resolveLlmTraceStreamName,
+  wrapStreamFnWithLlmRequestTrace,
+  type LlmRequestTraceContext,
+} from "../../../logging/llm-trace.js";
 import { getGlobalHookRunner } from "../../../plugins/hook-runner-global.js";
 import type {
   PluginHookAgentContext,
@@ -1233,9 +1238,25 @@ export async function runEmbeddedAttempt(
         const providerConfig = params.config?.models?.providers?.[params.model.provider];
         const providerBaseUrl =
           typeof providerConfig?.baseUrl === "string" ? providerConfig.baseUrl : undefined;
+        const ollamaTraceCtx: LlmRequestTraceContext | undefined = isLlmTraceEnabled()
+          ? {
+              streamName: resolveLlmTraceStreamName({
+                sessionId: params.sessionId,
+                runId: params.runId,
+              }),
+              sessionId: params.sessionId,
+              sessionKey: params.sessionKey,
+              runId: params.runId,
+              provider: params.provider,
+              modelId: params.modelId,
+              modelApi: params.model.api,
+              agentId: sessionAgentId,
+            }
+          : undefined;
         const ollamaStreamFn = createConfiguredOllamaStreamFn({
           model: params.model,
           providerBaseUrl,
+          llmTraceContext: ollamaTraceCtx,
         });
         activeSession.agent.streamFn = ollamaStreamFn;
         ensureCustomApiRegistered(params.model.api, ollamaStreamFn);
@@ -1383,6 +1404,26 @@ export async function runEmbeddedAttempt(
       if (anthropicPayloadLogger) {
         activeSession.agent.streamFn = anthropicPayloadLogger.wrapStreamFn(
           activeSession.agent.streamFn,
+        );
+      }
+
+      if (isLlmTraceEnabled()) {
+        const llmTraceCtx: LlmRequestTraceContext = {
+          streamName: resolveLlmTraceStreamName({
+            sessionId: params.sessionId,
+            runId: params.runId,
+          }),
+          sessionId: params.sessionId,
+          sessionKey: params.sessionKey,
+          runId: params.runId,
+          provider: params.provider,
+          modelId: params.modelId,
+          modelApi: params.model.api,
+          agentId: sessionAgentId,
+        };
+        activeSession.agent.streamFn = wrapStreamFnWithLlmRequestTrace(
+          activeSession.agent.streamFn,
+          llmTraceCtx,
         );
       }
 
@@ -2002,39 +2043,6 @@ export async function runEmbeddedAttempt(
             typeof entry.toolName === "string" && entry.toolName.trim().length > 0,
         )
         .map((entry) => ({ toolName: entry.toolName, meta: entry.meta }));
-
-      // Custom logging start
-      const logName = `${params.sessionId}.${params.runId}`;
-
-      if (toolMetasNormalized.length > 0) {
-        logMessagesToStreamLogger({
-          messages: toolMetasNormalized.map((entry) => ({
-            role: "tool-metas",
-            content: JSON.stringify(entry),
-          })),
-          name: logName,
-        })
-          .then((_) => {})
-          .catch((err) => {
-            log.error(`❗️ failed to log tool metas to stream logger: ${err}`);
-          });
-      }
-
-      let loggedHistoryMessages = messagesSnapshot.slice();
-
-      if (systemPromptText && systemPromptText.length > 0) {
-        loggedHistoryMessages.unshift({
-          role: "system",
-          content: systemPromptText,
-        });
-      }
-
-      logMessagesToStreamLogger({ messages: loggedHistoryMessages, name: logName })
-        .then((_) => {})
-        .catch((err) => {
-          log.error(`❗️ failed to log messages to stream logger: ${err}`);
-        });
-      // Custom logging end
 
       if (hookRunner?.hasHooks("llm_output")) {
         hookRunner
