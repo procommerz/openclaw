@@ -158,6 +158,7 @@ export const FIELD_LABELS: Record<string, string> = {
   "tools.alsoAllow": "Tool Allowlist Additions",
   "agents.list[].tools.profile": "Agent Tool Profile",
   "agents.list[].tools.alsoAllow": "Agent Tool Allowlist Additions",
+  "agents.list[].tools.dropBuiltInTools": "Agent Built-in Tools to Drop",
   "tools.byProvider": "Tool Policy by Provider",
   "agents.list[].tools.byProvider": "Agent Tool Policy by Provider",
   "tools.exec.applyPatch.enabled": "Enable apply_patch",

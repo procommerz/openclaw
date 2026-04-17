@@ -1,7 +1,7 @@
 import type { OpenClawConfig } from "../config/config.js";
 import { resolvePluginTools } from "../plugins/tools.js";
 import type { GatewayMessageChannel } from "../utils/message-channel.js";
-import { resolveSessionAgentId } from "./agent-scope.js";
+import { resolveAgentConfig, resolveSessionAgentId } from "./agent-scope.js";
 import type { SandboxFsBridge } from "./sandbox/fs-bridge.js";
 import type { SpawnedToolContext } from "./spawned-context.js";
 import type { ToolFsPolicy } from "./tool-fs-policy.js";
@@ -24,6 +24,8 @@ import { createSubagentsTool } from "./tools/subagents-tool.js";
 import { createTtsTool } from "./tools/tts-tool.js";
 import { createWebFetchTool, createWebSearchTool } from "./tools/web-tools.js";
 import { resolveWorkspaceRoot } from "./workspace-dir.js";
+
+const DROPPABLE_BUILT_IN_TOOL_NAMES = new Set(["browser", "canvas", "web_search", "pdf", "image"]);
 
 export function createOpenClawTools(
   options?: {
@@ -72,6 +74,15 @@ export function createOpenClawTools(
   } & SpawnedToolContext,
 ): AnyAgentTool[] {
   const workspaceDir = resolveWorkspaceRoot(options?.workspaceDir);
+  const agentId = resolveSessionAgentId({
+    sessionKey: options?.agentSessionKey,
+    config: options?.config,
+  });
+  const droppedBuiltInTools = new Set(
+    (resolveAgentConfig(options?.config ?? {}, agentId)?.tools?.dropBuiltInTools ?? []).filter(
+      (toolName) => DROPPABLE_BUILT_IN_TOOL_NAMES.has(toolName),
+    ),
+  );
   const imageTool = options?.agentDir?.trim()
     ? createImageTool({
         config: options?.config,
@@ -191,17 +202,16 @@ export function createOpenClawTools(
     ...(webFetchTool ? [webFetchTool] : []),
     ...(imageTool ? [imageTool] : []),
     ...(pdfTool ? [pdfTool] : []),
-  ];
+  ].filter(
+    (tool) => !(DROPPABLE_BUILT_IN_TOOL_NAMES.has(tool.name) && droppedBuiltInTools.has(tool.name)),
+  );
 
   const pluginTools = resolvePluginTools({
     context: {
       config: options?.config,
       workspaceDir,
       agentDir: options?.agentDir,
-      agentId: resolveSessionAgentId({
-        sessionKey: options?.agentSessionKey,
-        config: options?.config,
-      }),
+      agentId,
       sessionKey: options?.agentSessionKey,
       sessionId: options?.sessionId,
       messageChannel: options?.agentChannel,

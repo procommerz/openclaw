@@ -502,6 +502,7 @@ const CHANNELS_AGENTS_TARGET_KEYS = [
   "agents.defaults.memorySearch.sync.watchDebounceMs",
   "agents.defaults.workspace",
   "agents.list[].tools.alsoAllow",
+  "agents.list[].tools.dropBuiltInTools",
   "agents.list[].tools.byProvider",
   "agents.list[].tools.profile",
   "channels.bluebubbles",

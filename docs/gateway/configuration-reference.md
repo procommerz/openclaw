@@ -1715,6 +1715,30 @@ Global tool allow/deny policy (deny wins). Case-insensitive, supports `*` wildca
 }
 ```
 
+### `agents.list[].tools.dropBuiltInTools`
+
+Omit selected built-in OpenClaw tools for one agent before the normal tool policy pipeline runs.
+
+- Optional; unset or `[]` keeps the default built-in toolset.
+- Supported values: `browser`, `canvas`, `web_search`, `pdf`, `image`
+- This affects built-in OpenClaw tools only. It does not remove plugin tools.
+- `web_fetch` is separate and is not affected by dropping `web_search`.
+
+```json5
+{
+  agents: {
+    list: [
+      {
+        id: "remote-helper",
+        tools: {
+          dropBuiltInTools: ["browser", "canvas", "web_search"],
+        },
+      },
+    ],
+  },
+}
+```
+
 ### `tools.byProvider`
 
 Further restrict tools for specific providers or models. Order: base profile → provider profile → allow/deny.

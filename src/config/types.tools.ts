@@ -141,6 +141,16 @@ export type MediaToolsConfig = {
 
 export type ToolProfileId = "minimal" | "coding" | "messaging" | "full";
 
+export const AGENT_DROP_BUILT_IN_TOOL_IDS = [
+  "browser",
+  "canvas",
+  "web_search",
+  "pdf",
+  "image",
+] as const;
+
+export type AgentDropBuiltInToolId = (typeof AGENT_DROP_BUILT_IN_TOOL_IDS)[number];
+
 export type ToolLoopDetectionDetectorConfig = {
   /** Enable warning/blocking for repeated identical calls to the same tool/params. */
   genericRepeat?: boolean;
@@ -289,6 +299,8 @@ export type AgentToolsConfig = {
   /** Additional allowlist entries merged into allow and/or profile allowlist. */
   alsoAllow?: string[];
   deny?: string[];
+  /** Optional built-in OpenClaw tools to omit from this agent's toolset. */
+  dropBuiltInTools?: AgentDropBuiltInToolId[];
   /** Optional tool policy overrides keyed by provider id or "provider/model". */
   byProvider?: Record<string, ToolPolicyConfig>;
   /** Per-agent elevated exec gate (can only further restrict global tools.elevated). */

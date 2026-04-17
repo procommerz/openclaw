@@ -133,6 +133,29 @@ describe("config schema regressions", () => {
     expect(res.ok).toBe(true);
   });
 
+  it("accepts per-agent tools.dropBuiltInTools", () => {
+    const res = validateConfigObject({
+      agents: {
+        list: [
+          {
+            id: "main",
+            tools: {
+              dropBuiltInTools: ["browser", "canvas", "web_search", "pdf", "image"],
+            },
+          },
+          {
+            id: "worker",
+            tools: {
+              dropBuiltInTools: [],
+            },
+          },
+        ],
+      },
+    });
+
+    expect(res.ok).toBe(true);
+  });
+
   it("rejects non-positive pdf limits", () => {
     const res = validateConfigObject({
       agents: {

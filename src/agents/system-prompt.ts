@@ -269,6 +269,7 @@ export function buildAgentSystemPrompt(params: {
     session_status:
       "Show a /status-equivalent status card (usage + time + Reasoning/Verbose/Elevated); use for model-use questions (📊 session_status); optional per-session model override",
     image: "Analyze an image with the configured image model",
+    pdf: "Analyze a PDF with the configured PDF model",
   };
 
   const toolOrder = [
@@ -296,6 +297,7 @@ export function buildAgentSystemPrompt(params: {
     "subagents",
     "session_status",
     "image",
+    "pdf",
   ];
 
   const rawToolNames = (params.toolNames ?? []).map((tool) => tool.trim());

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getBlockedNetworkModeReason } from "../agents/sandbox/network-mode.js";
 import { parseDurationMs } from "../cli/parse-duration.js";
+import { AGENT_DROP_BUILT_IN_TOOL_IDS } from "./types.tools.js";
 import { AgentModelSchema } from "./zod-schema.agent-model.js";
 import {
   GroupChatSchema,
@@ -521,6 +522,7 @@ const CommonToolPolicyFields = {
 export const AgentToolsSchema = z
   .object({
     ...CommonToolPolicyFields,
+    dropBuiltInTools: z.enum(AGENT_DROP_BUILT_IN_TOOL_IDS).array().optional(),
     elevated: z
       .object({
         enabled: z.boolean().optional(),

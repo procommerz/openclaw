@@ -553,6 +553,8 @@ export const FIELD_HELP: Record<string, string> = {
     "Per-agent override for tool profile selection when one agent needs a different capability baseline. Use this sparingly so policy differences across agents stay intentional and reviewable.",
   "agents.list[].tools.alsoAllow":
     "Per-agent additive allowlist for tools on top of global and profile policy. Keep narrow to avoid accidental privilege expansion on specialized agents.",
+  "agents.list[].tools.dropBuiltInTools":
+    'Optional list of built-in OpenClaw tools to omit entirely for this agent. Supported values are "browser", "canvas", "web_search", "pdf", and "image"; leave unset or empty to keep the default built-in toolset.',
   "agents.list[].tools.byProvider":
     "Per-agent provider-specific tool policy overrides for channel-scoped capability control. Use this when a single agent needs tighter restrictions on one provider than others.",
   "tools.exec.approvalRunningNoticeMs":

@@ -597,6 +597,38 @@ terms before depending on subscription auth.
 }
 ```
 
+### Per-agent built-in tool drops
+
+```json5
+{
+  agents: {
+    defaults: {
+      workspace: "~/.openclaw/workspace",
+      imageModel: {
+        primary: "openrouter/anthropic/claude-sonnet-4-5",
+      },
+      pdfModel: {
+        primary: "openai/gpt-5.2",
+      },
+    },
+    list: [
+      {
+        id: "main",
+      },
+      {
+        id: "remote-helper",
+        workspace: "~/.openclaw/workspace-remote-helper",
+        tools: {
+          dropBuiltInTools: ["browser", "canvas", "web_search", "image", "pdf"],
+        },
+      },
+    ],
+  },
+}
+```
+
+This keeps the default built-in toolset for `main`, while removing those built-ins from `remote-helper`. `web_fetch` stays available unless you restrict it separately with normal tool policy.
+
 ### Local models only
 
 ```json5

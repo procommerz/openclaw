@@ -60,6 +60,31 @@ describe("config validation allowed-values metadata", () => {
     }
   });
 
+  it("includes allowed built-in tool ids for invalid agents.list[].tools.dropBuiltInTools values", () => {
+    const result = validateConfigObjectRaw({
+      agents: {
+        list: [
+          {
+            id: "main",
+            tools: {
+              dropBuiltInTools: ["browser", "web_fetch"],
+            },
+          },
+        ],
+      },
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      const issue = result.issues.find((entry) =>
+        entry.path.includes("agents.list.0.tools.dropBuiltInTools.1"),
+      );
+      expect(issue).toBeDefined();
+      expect(issue?.allowedValues).toEqual(["browser", "canvas", "web_search", "pdf", "image"]);
+      expect(issue?.message).toContain("expected one of");
+    }
+  });
+
   it("skips allowed-values hints for unions with open-ended branches", () => {
     const result = validateConfigObjectRaw({
       cron: { sessionRetention: true },
