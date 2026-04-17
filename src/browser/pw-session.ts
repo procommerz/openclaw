@@ -25,7 +25,7 @@ import {
   withBrowserNavigationPolicy,
 } from "./navigation-guard.js";
 import { memorableToOriginalId } from "../utils/memorable-ids.js";
-import { logWarn } from "../logger.js";
+import { logWarn, logInfo, logError } from "../logger.js";
 
 export type BrowserConsoleMessage = {
   type: string;
@@ -393,8 +393,12 @@ async function pageTargetId(page: Page): Promise<string | null> {
   const session = await page.context().newCDPSession(page);
   try {
     const info = (await session.send("Target.getTargetInfo")) as TargetInfoResponse;
+    logWarn(`[browser] [pageTargetId] (cdp session success) Target.getTargetInfo: ${JSON.stringify(info)}.`);  
     const targetId = String(info?.targetInfo?.targetId ?? "").trim();
     return targetId || null;
+  } catch (error) {
+    logWarn(`[browser] [pageTargetId] (cdp session failed) error: ${error}.`);  
+    throw error;
   } finally {
     await session.detach().catch(() => {});
   }
@@ -414,24 +418,36 @@ async function findPageByTargetId(
   for (const page of pages) {
     let tid: string | null = null;
     try {
+      logWarn(`[browser] [findPageByTargetId] trying to get target id for page: ${JSON.stringify(page)}.`);  
       tid = await pageTargetId(page);
       existingTids.push(tid);
       resolvedViaCdp = true;
-    } catch {
+    } catch(error) {
+      logError(`[browser] [findPageByTargetId] cdp session error: ${error}. page for tab not found by target id: ${targetId} (original: ${originalTargetId}), existing TIDs: ${existingTids.join(", ")}.`);  
+      logError(formatErrorMessage(error));
+      logError(error.stack);
       tid = null;
     }
     if (tid && (tid === originalTargetId || tid == targetId)) {
       return page;
     }
   }
+
+  if (pages.length == 0) {
+    logWarn(`[browser] [findPageByTargetId] 🚫📄 no pages found`);  
+    return null;
+  }
+
   // Extension relays can block CDP attachment APIs entirely. If that happens and
   // Playwright only exposes one page, return it as the best available mapping.
   if (!resolvedViaCdp && pages.length === 1) {
+    logWarn(`[browser] [findPageByTargetId] (single page fallback) page for tab not found by target id: ${targetId} (original: ${originalTargetId}), existing TIDs: ${existingTids.join(", ")}.`);  
     return pages[0];
   }
   // If CDP sessions fail (e.g., extension relay blocks Target.attachToBrowserTarget),
   // fall back to URL-based matching using the /json/list endpoint
   if (cdpUrl) {
+    logInfo(`[browser] [findPageByTargetId] CDP URL: ${cdpUrl}.`);  
     try {
       const cdpHttpBase = normalizeCdpHttpBaseForJsonEndpoints(cdpUrl);
       const targets = await fetchJson<
@@ -442,6 +458,8 @@ async function findPageByTargetId(
         }>
       >(appendCdpPath(cdpHttpBase, "/json/list"), 2000);
       existingTids.push(...targets.map((t) => t.id));            
+      // logInfo(`[browser] [findPageByTargetId] targets: ${JSON.stringify(targets)}.`);  
+      logInfo(`[browser] [findPageByTargetId] existingTids: ${existingTids.join(", ")}.`);  
       const target = targets.find((t) => t.id === originalTargetId || t.id === targetId);
       if (target) {
         let existingPageUrls = pages.map((p) => p.url());
