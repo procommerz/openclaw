@@ -98,17 +98,9 @@ export function postLlmTraceEvent(
     seq,
   };
 
-  // Wrap in the legacy { streamName, messages } shape so existing log viewers can consume it.
-  // eventType becomes the message role; the full event object is serialized as the content.
-  // Pretty-print with real newlines so long prompt texts are readable in log viewers.
-  const content = safeJsonStringifyPretty(event);
-  if (!content) {
-    log.warn("llm trace: failed to serialize event", { eventType: partial.eventType });
-    return;
-  }
   const body = safeJsonStringify({
     streamName: partial.streamName,
-    messages: [{ role: partial.eventType, content }],
+    event: event
   });
   if (!body) {
     log.warn("llm trace: failed to build body", { eventType: partial.eventType });
